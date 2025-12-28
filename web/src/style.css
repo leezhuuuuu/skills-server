@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Markdown Styles Override for Dark Mode */
+.prose pre {
+  @apply bg-gray-800 rounded-lg p-4;
+}
+.prose code {
+  @apply text-primary;
+}

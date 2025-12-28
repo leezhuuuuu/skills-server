@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+
+# Build artifacts
+bin/
+*.exe
+*.test
+
+# Dependencies
+vendor/
+go.sum
+
+# Documentation
+README.md
+*.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage.out
+
+# Local data (mounted via volume)
+data/

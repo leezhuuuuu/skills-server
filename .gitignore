@@ -1,0 +1,53 @@
+# --- Go ---
+# Binaries
+skills-server
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (installed manually or via go mod vendor)
+vendor/
+
+# Go workspace file
+go.work
+
+# --- Node / Frontend (web directory) ---
+web/node_modules/
+web/dist/
+web/.env
+web/.env.local
+web/.env.*.local
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+web/pnpm-debug.log*
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# --- Build Artifacts ---
+# 我们在 main.go 中 embed 了这个目录，但它是由前端 build 生成的，不应提交源码
+cmd/server/web_dist/
+
+# --- Data Directory ---
+# 默认的数据目录通常用于本地测试，不建议提交（除非作为示例数据）
+# 如果你想保留 .gitkeep 结构，可以忽略内容但保留目录
+data/*
+!data/.gitkeep
+!data/README.md
+!data/test-skill/
+
+# --- Environment ---
+.env

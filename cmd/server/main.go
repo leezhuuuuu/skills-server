@@ -4,7 +4,10 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"log"
+	"mime"
 	"net/http"
+	"path"
 	"strings"
 
 	"skills-server/internal/config"
@@ -30,9 +33,31 @@ func main() {
 	h := handlers.New(idx)
 
 	r := gin.Default()
+	// Avoid redirect loops when serving SPA paths.
+	r.RedirectTrailingSlash = false
+	r.RedirectFixedPath = false
 
 	// CORS
 	r.Use(cors.Default())
+
+	// Frontend Static Files
+	// 提取嵌入文件系统的子目录
+	staticFS, err := fs.Sub(webDist, "web_dist")
+	if err != nil {
+		log.Fatalf("Failed to load embedded frontend: %v", err)
+	}
+	indexHTML, err := fs.ReadFile(staticFS, "index.html")
+	if err != nil {
+		log.Fatalf("Failed to read embedded index.html: %v", err)
+	}
+
+	serveIndex := func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
+	}
+
+	r.GET("/", func(c *gin.Context) {
+		serveIndex(c)
+	})
 
 	// API Routes
 	api := r.Group("/api/v1")
@@ -51,14 +76,36 @@ func main() {
 			h.GetSkillMD(c)
 			return
 		}
-		// 如果不是 .md，交给前端路由处理（Fallthrough）
-		c.Next()
+		// 如果不是 .md，交给前端路由处理（SPA）
+		serveIndex(c)
 	})
 
-	// Frontend Static Files
-	// 提取嵌入文件系统的子目录
-	staticFS, _ := fs.Sub(webDist, "web_dist")
-	r.StaticFS("/assets", http.FS(staticFS)) // 这主要服务 assets 目录
+	// Serve embedded assets with explicit Content-Type.
+	serveAsset := func(c *gin.Context) {
+		p := strings.TrimPrefix(c.Param("filepath"), "/")
+		if p == "" {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		clean := path.Clean("/" + p)
+		if strings.HasPrefix(clean, "/..") {
+			c.Status(http.StatusBadRequest)
+			return
+		}
+		filePath := path.Join("assets", strings.TrimPrefix(clean, "/"))
+		data, err := fs.ReadFile(staticFS, filePath)
+		if err != nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		contentType := mime.TypeByExtension(path.Ext(filePath))
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		c.Data(http.StatusOK, contentType, data)
+	}
+	r.GET("/assets/*filepath", serveAsset)
+	r.HEAD("/assets/*filepath", serveAsset)
 
 	// SPA 路由处理 (所有找不到的路由都返回 index.html)
 	r.NoRoute(func(c *gin.Context) {
@@ -68,7 +115,7 @@ func main() {
 			return
 		}
 
-		c.FileFromFS("index.html", http.FS(staticFS))
+		serveIndex(c)
 	})
 
 	fmt.Printf("Skills Server running on :%s, serving %s\n", cfg.Port, cfg.DataDir)
